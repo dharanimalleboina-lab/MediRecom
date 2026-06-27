@@ -15,9 +15,7 @@ import os
 
 # STEP 1: LOAD DATA
 print("Loading dataset...")
-train_df = pd.read_csv('dataset/drugsComTrain_raw.csv')
-test_df  = pd.read_csv('dataset/drugsComTest_raw.csv')
-df = pd.concat([train_df, test_df], ignore_index=True)
+df = pd.read_csv('dataset/drugsComTest_raw.csv')
 print(f"Total records loaded: {len(df)}")
 
 # STEP 2: KEEP ONLY NEEDED COLUMNS

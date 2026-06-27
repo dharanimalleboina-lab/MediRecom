@@ -9,6 +9,13 @@ from flask_login import LoginManager, login_user, logout_user, login_required, c
 from werkzeug.security import generate_password_hash, check_password_hash
 from database.db import db, User, Prediction
 from model.predict import get_recommendations
+import os
+import subprocess
+
+# Train model if pkl files don't exist (first deployment)
+if not os.path.exists('model/drug_model.pkl'):
+    print("Training model for first time...")
+    subprocess.run(['python', 'model/train_model.py'], check=True)
 
 # ── CREATE FLASK APP ─────────────────────────────────────────
 app = Flask(__name__)

@@ -18,8 +18,5 @@ model/condition_encoder.pkl
 model/drug_encoder.pkl
 model/cleaned_data.csv
 
-# Dataset (too large for GitHub)
-dataset/
-
 # VS Code settings
 .vscode/
