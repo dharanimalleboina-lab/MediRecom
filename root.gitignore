@@ -1,0 +1,25 @@
+# Virtual environment
+venv/
+
+# Database file
+*.db
+
+# Environment variables (API keys)
+.env
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Model files (too large for GitHub)
+model/drug_model.pkl
+model/condition_encoder.pkl
+model/drug_encoder.pkl
+model/cleaned_data.csv
+
+# Dataset (too large for GitHub)
+dataset/
+
+# VS Code settings
+.vscode/

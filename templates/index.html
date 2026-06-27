@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% block title %}MediRecom — AI Drug Recommendation{% endblock %}
+
+{% block content %}
+<div class="container">
+
+  <!-- HERO SECTION -->
+  <div class="hero fade-in" style="text-align:center; padding: 48px 0 40px;">
+    <div style="display:inline-flex; align-items:center; justify-content:center;
+                width:72px; height:72px; background:rgba(59,109,17,0.15);
+                border-radius:50%; margin-bottom:20px;">
+      <i class="fa-solid fa-pills" style="font-size:32px; color:#3B6D11;"></i>
+    </div>
+    <h1 style="font-size:32px; font-weight:600; color:#27500A; margin-bottom:12px;">
+      AI-Powered Drug Recommendation
+    </h1>
+    <p style="font-size:16px; color:#3B6D11; max-width:520px; margin:0 auto 32px; line-height:1.7;">
+      Enter your medical condition and get intelligent drug recommendations
+      with real-time allergy alerts — powered by Machine Learning.
+    </p>
+    {% if current_user.is_authenticated %}
+      <a href="/dashboard" class="btn-primary">
+        <i class="fa-solid fa-magnifying-glass"></i> Get Recommendations
+      </a>
+    {% else %}
+      <a href="/register" class="btn-primary" style="margin-right:12px;">
+        <i class="fa-solid fa-user-plus"></i> Get Started Free
+      </a>
+      <a href="/login" class="btn-outline">
+        <i class="fa-solid fa-right-to-bracket"></i> Login
+      </a>
+    {% endif %}
+  </div>
+
+  <!-- FEATURE CARDS -->
+  <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-bottom:40px;">
+
+    <div class="glass fade-in" style="padding:24px; text-align:center;">
+      <i class="fa-solid fa-robot" style="font-size:28px; color:#3B6D11; margin-bottom:12px;"></i>
+      <h3 style="font-size:15px; font-weight:600; color:#27500A; margin-bottom:8px;">ML Powered</h3>
+      <p style="font-size:13px; color:#3B6D11; line-height:1.6;">
+        Random Forest model trained on 215,000+ real patient drug reviews
+      </p>
+    </div>
+
+    <div class="glass fade-in" style="padding:24px; text-align:center; animation-delay:0.1s;">
+      <i class="fa-solid fa-triangle-exclamation" style="font-size:28px; color:#3B6D11; margin-bottom:12px;"></i>
+      <h3 style="font-size:15px; font-weight:600; color:#27500A; margin-bottom:8px;">Allergy Alerts</h3>
+      <p style="font-size:13px; color:#3B6D11; line-height:1.6;">
+        Real-time allergy detection with instant red alerts for unsafe drugs
+      </p>
+    </div>
+
+    <div class="glass fade-in" style="padding:24px; text-align:center; animation-delay:0.2s;">
+      <i class="fa-solid fa-chart-bar" style="font-size:28px; color:#3B6D11; margin-bottom:12px;"></i>
+      <h3 style="font-size:15px; font-weight:600; color:#27500A; margin-bottom:8px;">Confidence Scores</h3>
+      <p style="font-size:13px; color:#3B6D11; line-height:1.6;">
+        Each recommendation comes with a reliability score and review count
+      </p>
+    </div>
+
+  </div>
+
+  <!-- CONDITIONS LIST -->
+  <div class="glass fade-in" style="padding:28px;">
+    <h2 style="font-size:17px; font-weight:600; color:#27500A; margin-bottom:16px;">
+      <i class="fa-solid fa-stethoscope" style="margin-right:8px;"></i>
+      50+ Medical Conditions Supported
+    </h2>
+    <div style="display:flex; flex-wrap:wrap; gap:8px;">
+      {% for condition in [
+        'Depression','Anxiety','ADHD','Acne','Migraine',
+        'High Blood Pressure','High Cholesterol','Insomnia',
+        'Diabetes','Birth Control','Back Pain','Obesity',
+        'Sinusitis','Psoriasis','Osteoarthritis','GERD',
+        'HIV Infection','Hepatitis C','Schizophrenia','Pain'
+      ] %}
+      <span style="padding:6px 14px; background:rgba(192,221,151,0.5);
+                   border-radius:20px; font-size:13px; color:#27500A;
+                   border:1px solid rgba(99,153,34,0.3);">
+        {{ condition }}
+      </span>
+      {% endfor %}
+      <span style="padding:6px 14px; background:rgba(59,109,17,0.1);
+                   border-radius:20px; font-size:13px; color:#3B6D11;">
+        + 30 more...
+      </span>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

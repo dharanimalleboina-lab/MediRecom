@@ -1,0 +1,284 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — MediRecom{% endblock %}
+
+{% block content %}
+<div class="container">
+
+  <!-- WELCOME HEADER -->
+  <div class="fade-in" style="margin-bottom:28px;">
+    <h1 style="font-size:22px; font-weight:600; color:#27500A;">
+      <i class="fa-solid fa-hand-wave" style="margin-right:8px;"></i>
+      Welcome, {{ user.username }}!
+    </h1>
+    <p style="font-size:14px; color:#3B6D11; margin-top:4px;">
+      Search for a condition to get AI-powered drug recommendations
+    </p>
+  </div>
+
+  <!-- SEARCH CARD -->
+  <div class="glass fade-in" style="padding:28px; margin-bottom:24px;">
+    <h2 style="font-size:16px; font-weight:600; color:#27500A; margin-bottom:20px;">
+      <i class="fa-solid fa-magnifying-glass" style="margin-right:8px;"></i>
+      Get Drug Recommendations
+    </h2>
+
+    <div class="form-group">
+      <label>Medical Condition</label>
+      <input type="text" id="conditionInput"
+             placeholder="e.g. depression, anxiety, acne, migraine..."
+             style="font-size:15px;" />
+    </div>
+
+    <div class="form-group">
+      <label>
+        Additional Allergies
+        <span style="font-weight:400; color:#639922;">
+          (your saved allergies: {{ user.allergies or 'none' }})
+        </span>
+      </label>
+      <input type="text" id="allergyInput"
+             placeholder="Add more allergies for this search..." />
+    </div>
+
+    <button class="btn-primary" onclick="getRecommendations()" id="searchBtn">
+      <i class="fa-solid fa-pills"></i> Get Recommendations
+    </button>
+  </div>
+
+  <!-- RESULTS SECTION (hidden until search) -->
+  <div id="resultsSection" style="display:none;">
+
+    <!-- ALLERGY ALERTS -->
+    <div id="alertsContainer" style="margin-bottom:16px;"></div>
+
+    <!-- DRUG CARDS -->
+    <div class="glass fade-in" style="padding:28px; margin-bottom:24px;">
+      <h2 style="font-size:16px; font-weight:600; color:#27500A; margin-bottom:20px;">
+        <i class="fa-solid fa-capsules" style="margin-right:8px;"></i>
+        Top Recommendations for: <span id="conditionTitle" style="color:#3B6D11;"></span>
+      </h2>
+      <div id="drugCards" style="display:grid; grid-template-columns:1fr 1fr; gap:14px;"></div>
+    </div>
+
+  </div>
+
+  <!-- LOADING SPINNER -->
+  <div id="loadingSpinner" style="display:none; text-align:center; padding:40px;">
+    <i class="fa-solid fa-spinner fa-spin" style="font-size:32px; color:#3B6D11;"></i>
+    <p style="margin-top:12px; color:#3B6D11;">Analyzing condition and finding best drugs...</p>
+  </div>
+
+  <!-- ERROR MESSAGE -->
+  <div id="errorMsg" style="display:none;" class="glass" style="padding:20px;"></div>
+
+  <!-- HISTORY SECTION -->
+  {% if history %}
+  <div class="glass fade-in" style="padding:28px; margin-top:8px;">
+    <h2 style="font-size:16px; font-weight:600; color:#27500A; margin-bottom:16px;">
+      <i class="fa-solid fa-clock-rotate-left" style="margin-right:8px;"></i>
+      Recent Searches
+    </h2>
+    <div style="display:flex; flex-direction:column; gap:10px;">
+      {% for pred in history %}
+      <div style="display:flex; align-items:center; justify-content:space-between;
+                  padding:12px 16px; background:rgba(255,255,255,0.5);
+                  border-radius:10px; border:1px solid rgba(99,153,34,0.2);">
+        <div>
+          <span style="font-weight:500; color:#27500A; font-size:14px;">
+            {{ pred.condition | title }}
+          </span>
+          <span style="font-size:13px; color:#3B6D11; margin-left:12px;">
+            → {{ pred.top_drug | title }}
+          </span>
+        </div>
+        <div style="display:flex; align-items:center; gap:10px;">
+          {% if pred.had_alerts %}
+          <span class="badge badge-alert">
+            <i class="fa-solid fa-triangle-exclamation"></i> Alert
+          </span>
+          {% endif %}
+          <span style="font-size:12px; color:#639922;">
+            {{ pred.created_at.strftime('%d %b %Y') }}
+          </span>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- UPDATE ALLERGIES -->
+  <div class="glass fade-in" style="padding:28px; margin-top:24px;">
+    <h2 style="font-size:16px; font-weight:600; color:#27500A; margin-bottom:16px;">
+      <i class="fa-solid fa-shield-halved" style="margin-right:8px;"></i>
+      My Saved Allergies
+    </h2>
+    <form method="POST" action="/update-allergies" style="display:flex; gap:12px;">
+      <input type="text" name="allergies"
+             value="{{ user.allergies }}"
+             placeholder="e.g. penicillin, aspirin"
+             style="flex:1; padding:10px 16px; border-radius:10px;
+                    border:1px solid rgba(99,153,34,0.3);
+                    background:rgba(255,255,255,0.7);
+                    font-size:14px; outline:none;" />
+      <button type="submit" class="btn-primary">
+        <i class="fa-solid fa-floppy-disk"></i> Save
+      </button>
+    </form>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+async function getRecommendations() {
+  const condition = document.getElementById('conditionInput').value.trim();
+  const allergies = document.getElementById('allergyInput').value.trim();
+
+  // Validate input
+  if (!condition) {
+    alert('Please enter a medical condition.');
+    return;
+  }
+
+  // Show loading, hide results
+  document.getElementById('loadingSpinner').style.display  = 'block';
+  document.getElementById('resultsSection').style.display  = 'none';
+  document.getElementById('errorMsg').style.display        = 'none';
+  document.getElementById('searchBtn').disabled            = true;
+
+  try {
+    // Call Flask API
+    const response = await fetch('/predict', {
+      method : 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body   : JSON.stringify({ condition, allergies })
+    });
+
+    const data = await response.json();
+
+    // Hide loading
+    document.getElementById('loadingSpinner').style.display = 'none';
+    document.getElementById('searchBtn').disabled           = false;
+
+    if (data.status === 'error') {
+      showError(data.message, data.similar);
+      return;
+    }
+
+    // Show results
+    showResults(data);
+
+  } catch (err) {
+    document.getElementById('loadingSpinner').style.display = 'none';
+    document.getElementById('searchBtn').disabled           = false;
+    showError('Something went wrong. Please try again.');
+  }
+}
+
+function showResults(data) {
+  // Set condition title
+  document.getElementById('conditionTitle').textContent =
+    data.condition.charAt(0).toUpperCase() + data.condition.slice(1);
+
+  // Show allergy alerts
+  const alertsContainer = document.getElementById('alertsContainer');
+  alertsContainer.innerHTML = '';
+  if (data.allergy_alerts && data.allergy_alerts.length > 0) {
+    data.allergy_alerts.forEach(alert => {
+      alertsContainer.innerHTML += `
+        <div class="glass" style="padding:14px 18px; margin-bottom:10px;
+             background:rgba(247,193,193,0.6); border:1px solid #F09595;">
+          <i class="fa-solid fa-triangle-exclamation" style="color:#A32D2D; margin-right:8px;"></i>
+          <strong style="color:#A32D2D;">Allergy Alert:</strong>
+          <span style="color:#791F1F; margin-left:4px;">
+            ${alert.drug.charAt(0).toUpperCase() + alert.drug.slice(1)}
+            — ${alert.reason}
+          </span>
+        </div>`;
+    });
+  }
+
+  // Build drug cards
+  const drugCards = document.getElementById('drugCards');
+  drugCards.innerHTML = '';
+  data.recommendations.forEach((drug, index) => {
+    const isSafe      = drug.is_safe;
+    const barColor    = isSafe ? '#3B6D11' : '#E24B4A';
+    const barWidth    = Math.min(drug.confidence, 100);
+    const badgeClass  = isSafe ? 'badge-safe' : 'badge-alert';
+    const badgeIcon   = isSafe ? 'fa-check' : 'fa-triangle-exclamation';
+    const badgeText   = isSafe ? 'Safe' : 'Allergy Alert';
+    const cardBg      = isSafe
+      ? 'rgba(255,255,255,0.6)'
+      : 'rgba(252,235,235,0.7)';
+
+    drugCards.innerHTML += `
+      <div class="glass fade-in" style="padding:18px; background:${cardBg};
+           animation-delay:${index * 0.08}s;">
+        <div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:10px;">
+          <div>
+            <div style="font-size:15px; font-weight:600; color:#27500A;">
+              ${index + 1}. ${drug.drug_name.charAt(0).toUpperCase() + drug.drug_name.slice(1)}
+            </div>
+            <div style="font-size:12px; color:#639922; margin-top:2px;">
+              ${drug.review_count} patient reviews
+            </div>
+          </div>
+          <span class="badge ${badgeClass}">
+            <i class="fa-solid ${badgeIcon}"></i> ${badgeText}
+          </span>
+        </div>
+
+        <!-- Rating bar -->
+        <div style="height:6px; background:rgba(99,153,34,0.2); border-radius:4px; margin-bottom:8px;">
+          <div style="height:6px; width:${barWidth}%; background:${barColor};
+                      border-radius:4px; transition:width 0.6s ease;"></div>
+        </div>
+
+        <div style="display:flex; justify-content:space-between; font-size:13px; color:#3B6D11;">
+          <span>Rating: ${drug.avg_rating}/10</span>
+          <span>Score: ${drug.confidence}%</span>
+        </div>
+
+        ${!isSafe ? `
+        <div style="margin-top:10px; padding:8px 12px; background:rgba(247,193,193,0.5);
+                    border-radius:8px; font-size:12px; color:#A32D2D;">
+          <i class="fa-solid fa-circle-exclamation"></i> ${drug.alert}
+        </div>` : ''}
+      </div>`;
+  });
+
+  // Show results section
+  document.getElementById('resultsSection').style.display = 'block';
+  document.getElementById('resultsSection').scrollIntoView({ behavior: 'smooth' });
+}
+
+function showError(message, similar) {
+  const errorDiv = document.getElementById('errorMsg');
+  let html = `
+    <div class="glass" style="padding:20px; background:rgba(252,235,235,0.7);
+         border:1px solid #F09595;">
+      <i class="fa-solid fa-circle-exclamation" style="color:#A32D2D; margin-right:8px;"></i>
+      <strong style="color:#A32D2D;">Not Found:</strong>
+      <span style="color:#791F1F;"> ${message}</span>`;
+
+  if (similar && similar.length > 0) {
+    html += `<div style="margin-top:10px; font-size:13px; color:#3B6D11;">
+      <strong>Did you mean:</strong> ${similar.join(', ')}
+    </div>`;
+  }
+  html += '</div>';
+  errorDiv.innerHTML = html;
+  errorDiv.style.display = 'block';
+}
+
+// Allow pressing Enter to search
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('conditionInput').addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') getRecommendations();
+  });
+});
+</script>
+{% endblock %}
